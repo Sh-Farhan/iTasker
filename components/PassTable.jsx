@@ -45,7 +45,7 @@ import {
             </TableBody>
           </Table>
         </div>
-      </div> : <div className="container mx-auto flex justify-center items-center mt-10">No Passwords to show !</div>}
+      </div> : <div className="container mx-auto mb-60 flex justify-center items-center mt-10">No Passwords to show !</div>}
       </div>
     );
   }
