@@ -3,7 +3,7 @@ import { MongoClient } from "mongodb";
 import bodyParser from "body-parser";
 export const dynamic = 'force-static'
 
-const url =  process.env.MONGO_URI;
+const url =  process.env.MONGODB_URI;
 const client = new MongoClient(url)
 
 const dbName = 'pass-manager-user-db'
@@ -19,7 +19,6 @@ export const GET = async () => {
     } catch(error){
         return new NextResponse("Error in fetching users" + error.message)
     }
-
 }
 
 export const POST = async (req,res) => {
