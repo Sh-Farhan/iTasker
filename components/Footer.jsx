@@ -1,28 +1,71 @@
-import React from "react"
-import { Shield } from "lucide-react"
-import Link from "next/link"
+import React from 'react';
+import { Facebook, Twitter, Linkedin, Mail, Phone } from 'lucide-react';
 
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="border-t border-gray-800 bg-black">
-      <div className="container flex flex-col items-center justify-between gap-4 py-10 md:h-24 md:flex-row md:py-0">
-        <div className="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
-          <Shield className="h-6 w-6 text-primary" />
-          <p className="text-center text-sm leading-loose text-gray-300 md:text-left">
-            Built by SecurePass. The source code is available on{" "}
-            <Link href="#" target="_blank" rel="noreferrer" className="font-medium text-primary underline underline-offset-4">
-              GitHub
-            </Link>
-            .
-          </p>
+    <footer className="bg-gray-50 py-10 text-gray-600 font-sans">
+      <div className="max-w-6xl mx-auto px-5">
+        <div className="flex flex-wrap mb-8">
+          <div className="flex-1 min-w-[200px] mb-5">
+            <h3 className="text-lg font-bold mb-4 text-gray-800">About Us</h3>
+            <p className="text-sm leading-6">
+              Empowering teams to achieve more through intuitive task management and collaboration tools.
+            </p>
+          </div>
+          <div className="flex-1 min-w-[200px] mb-5">
+            <h3 className="text-lg font-bold mb-4 text-gray-800">Quick Links</h3>
+            <ul className="list-none p-0 m-0">
+              <li><a href="/" className="text-sm text-gray-600 hover:underline leading-8">Dashboard</a></li>
+              <li><a href="/tasks" className="text-sm text-gray-600 hover:underline leading-8">My Tasks</a></li>
+              <li><a href="/projects" className="text-sm text-gray-600 hover:underline leading-8">Projects</a></li>
+              <li><a href="/team" className="text-sm text-gray-600 hover:underline leading-8">Team</a></li>
+            </ul>
+          </div>
+          <div className="flex-1 min-w-[200px] mb-5">
+            <h3 className="text-lg font-bold mb-4 text-gray-800">Contact Us</h3>
+            <p className="text-sm leading-6 flex items-center">
+              <Mail className="mr-2" size={16} /> support@example.com
+            </p>
+            <p className="text-sm leading-6 flex items-center">
+              <Phone className="mr-2" size={16} /> (123) 456-7890
+            </p>
+          </div>
         </div>
-        <nav className="flex items-center space-x-4 text-sm font-medium">
-          <Link href="/about" className="text-gray-300 hover:text-white">About</Link>
-          <Link href="/privacy" className="text-gray-300 hover:text-white">Privacy</Link>
-          <Link href="/terms" className="text-gray-300 hover:text-white">Terms</Link>
-          <Link href="/contact" className="text-gray-300 hover:text-white">Contact</Link>
-        </nav>
+        <div className="flex justify-between items-center border-t border-gray-200 pt-5 flex-wrap">
+          <p className="text-sm my-2">© {currentYear} Your Company Name. All rights reserved.</p>
+          <div className="flex gap-4">
+            <a
+              href="https://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-800"
+              aria-label="Twitter"
+            >
+              <Twitter size={20} />
+            </a>
+            <a
+              href="https://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-800"
+              aria-label="Facebook"
+            >
+              <Facebook size={20} />
+            </a>
+            <a
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-800"
+              aria-label="LinkedIn"
+            >
+              <Linkedin size={20} />
+            </a>
+          </div>
+        </div>
       </div>
     </footer>
-  )
+  );
 }
