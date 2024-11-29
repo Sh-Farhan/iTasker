@@ -26,7 +26,7 @@ export default function NavBar() {
     <nav style={styles.nav}>
       <div style={styles.container}>
         <div style={styles.navItems}>
-          <NavItem href="/" icon={Home}>Dashboard</NavItem>
+          <NavItem href="/dashboard" icon={Home}>Dashboard</NavItem>
           <NavItem href="/tasks" icon={CheckCircle}>Tasks</NavItem>
           <NavItem href="/projects" icon={FolderKanban}>Projects</NavItem>
           <div 

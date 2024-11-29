@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SignupPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -67,17 +69,58 @@ export default function SignupPage() {
     return isValid
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault()
+  //   if (validateForm()) {
+  //     // Here you would typically send the form data to your backend
+  //     console.log(formData)
+  //     const result = await fetch("/api/users/signup")
+  //     toast({
+  //       title: "Account created",
+  //       description: "You have successfully signed up!",
+  //     })
+  //   }
+  // }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const myData = {username : formData.name, password : formData.password, email : formData.email}
     if (validateForm()) {
-      // Here you would typically send the form data to your backend
-      console.log(formData)
-      toast({
-        title: "Account created",
-        description: "You have successfully signed up!",
-      })
+      try {
+        const response = await fetch("/api/users/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json", // Indicating JSON data
+          },
+          body: JSON.stringify(myData), // Sending the form data as JSON
+        });
+  
+        if (response.ok) {
+          const result = await response.json(); // Parsing the JSON response
+          console.log(result);
+          toast({
+            title: "Account created",
+            description: "You have successfully signed up!",
+          });
+          router.push("/login")
+        } else {
+          console.log("Signup failed", response.statusText);
+          toast({
+            title: "Error",
+            description: "Failed to sign up. Please try again.",
+            status: "error",
+          });
+        }
+      } catch (error) {
+        console.log("Error during signup:", error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred.",
+          status: "error",
+        });
+      }
     }
-  }
+  };
+  
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">

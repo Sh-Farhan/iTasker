@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
-import bodyParser from "body-parser";
 export const dynamic = 'force-static'
 
 const url =  process.env.MONGODB_URI;
 const client = new MongoClient(url)
 
-const dbName = 'pass-manager-user-db'
+const dbName = 'iTasker-todos'
 
 export const GET = async () => {
     try{
@@ -21,7 +20,7 @@ export const GET = async () => {
     }
 }
 
-export const POST = async (req,res) => {
+export const POST = async (req) => {
     try {
         const data = await req.json();
         await client.connect();
@@ -37,7 +36,7 @@ export const POST = async (req,res) => {
     }
 };
 
-export const DELETE = async(req,res) => {
+export const DELETE = async(req) => {
     try{
         const data = await req.json();
         console.log(data);
