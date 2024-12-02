@@ -15,7 +15,7 @@ export async function GET(req){
             expires: new Date(0)
         })
 
-        return res; 
+        return res;  
 
     } catch (error) {
         return NextResponse.json({error: error.message},

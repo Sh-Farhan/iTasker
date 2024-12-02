@@ -1,6 +1,5 @@
 "use client"
 
-
 import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,8 +14,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 // import { useToast } from "@/components/ui/use-toast"
 import { useToast } from "@/hooks/use-toast"
+import axios from "axios"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -53,17 +55,64 @@ export default function LoginPage() {
     return isValid
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault()
+  //   if (validateForm()) {
+  //     // Here you would typically send the login request to your backend
+  //     let myData = JSON.stringify(formData)
+  //     const res = await axios.post("/api/users/login" ,formData)
+  //     console.log(res)   
+  //     console.log("Login attempt with:", formData)
+  //     toast({
+  //       title: "Login Attempt",
+  //       description: "Login functionality not implemented yet.",
+  //     })
+  //   }
+  // }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
     if (validateForm()) {
-      // Here you would typically send the login request to your backend
-      console.log("Login attempt with:", formData)
-      toast({
-        title: "Login Attempt",
-        description: "Login functionality not implemented yet.",
-      })
+      try {
+        // Check the form data structure
+        console.log("Form Data:", formData);
+  
+        // Send login request
+        const res = await axios.post("/api/users/login", formData, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+  
+        // Log the response
+        console.log("Response:", res.data);
+  
+        // Notify user of successful login
+        toast({
+          title: "Success",
+          description: "You are logged in!",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+        router.push('/tasks')
+      } catch (error) {
+        // Log and display the error
+        console.error("Axios Error:", error);
+        const errorMessage =
+          error.response?.data?.error || "An unexpected error occurred.";
+  
+        toast({
+          title: "Login Failed",
+          description: errorMessage,
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
     }
-  }
+  };
+  
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
