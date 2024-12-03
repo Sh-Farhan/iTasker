@@ -20,11 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import Manager from "@/components/Manager";
+import Header from "@/components/Header";
 
 export default function Home() {
   return (
     <>
-    <Manager></Manager>
+    {/* <Manager></Manager> */}
+    <Header></Header>
     </>
   );
 }

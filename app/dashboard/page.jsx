@@ -1,7 +1,20 @@
 "use client"
+
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { CheckCircle2, Clock, ListTodo, Users } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 
 const taskData = [
   { name: "Mon", tasks: 3 },
@@ -20,40 +33,49 @@ const recentTasks = [
   { id: 4, title: "Set up CI/CD pipeline", status: "In Progress", assignee: "David", dueDate: "2023-06-18" },
 ];
 
-const Card = ({ title, value, subtitle, icon: Icon }) => (
-  <div style={styles.card}>
-    <div style={styles.cardHeader}>
-      <h3 style={styles.cardTitle}>{title}</h3>
-      <Icon size={16} color="#6B7280" />
-    </div>
-    <div style={styles.cardContent}>
-      <div style={styles.cardValue}>{value}</div>
-      <p style={styles.cardSubtitle}>{subtitle}</p>
-    </div>
-  </div>
+const DashboardCard = ({ title, value, subtitle, icon: Icon }) => (
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <Icon className="h-4 w-4 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{value}</div>
+      <p className="text-xs text-muted-foreground">{subtitle}</p>
+    </CardContent>
+  </Card>
 );
 
-const ProgressBar = ({ value }) => (
-  <div style={styles.progressBarContainer}>
-    <div style={{...styles.progressBarFill, width: `${value}%`}} />
+const ProjectProgress = ({ title, subtitle, percentage }) => (
+  <div className="space-y-2">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+      <span className="text-sm font-medium">{percentage}%</span>
+    </div>
+    <Progress value={percentage} className="h-2" />
   </div>
 );
 
 export default function UserDashboard() {
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Welcome back, Alex!</h1>
-      <div style={styles.cardGrid}>
-        <Card title="Total Tasks" value="24" subtitle="4 completed this week" icon={ListTodo} />
-        <Card title="In Progress" value="8" subtitle="2 due today" icon={Clock} />
-        <Card title="Completed" value="16" subtitle="3 completed today" icon={CheckCircle2} />
-        <Card title="Team Members" value="6" subtitle="2 active now" icon={Users} />
+    <div className="container mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Welcome back, Alex!</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <DashboardCard title="Total Tasks" value="24" subtitle="4 completed this week" icon={ListTodo} />
+        <DashboardCard title="In Progress" value="8" subtitle="2 due today" icon={Clock} />
+        <DashboardCard title="Completed" value="16" subtitle="3 completed today" icon={CheckCircle2} />
+        <DashboardCard title="Team Members" value="6" subtitle="2 active now" icon={Users} />
       </div>
-      <div style={styles.chartGrid}>
-        <div style={styles.chartCard}>
-          <h2 style={styles.chartTitle}>Task Completion</h2>
-          <p style={styles.chartDescription}>Your task completion rate this week</p>
-          <div style={styles.chart}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Task Completion</CardTitle>
+            <p className="text-sm text-muted-foreground">Your task completion rate this week</p>
+          </CardHeader>
+          <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={taskData}>
                 <XAxis dataKey="name" />
@@ -62,241 +84,60 @@ export default function UserDashboard() {
                 <Bar dataKey="tasks" fill="#8884d8" />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        </div>
-        <div style={styles.chartCard}>
-          <h2 style={styles.chartTitle}>Project Progress</h2>
-          <p style={styles.chartDescription}>Current status of your active projects</p>
-          <div style={styles.projectList}>
-            <div style={styles.project}>
-              <div style={styles.projectHeader}>
-                <div>
-                  <p style={styles.projectTitle}>Website Redesign</p>
-                  <p style={styles.projectSubtitle}>UI/UX Design</p>
-                </div>
-                <span style={styles.projectPercentage}>75%</span>
-              </div>
-              <ProgressBar value={75} />
-            </div>
-            <div style={styles.project}>
-              <div style={styles.projectHeader}>
-                <div>
-                  <p style={styles.projectTitle}>Mobile App Development</p>
-                  <p style={styles.projectSubtitle}>React Native</p>
-                </div>
-                <span style={styles.projectPercentage}>60%</span>
-              </div>
-              <ProgressBar value={60} />
-            </div>
-            <div style={styles.project}>
-              <div style={styles.projectHeader}>
-                <div>
-                  <p style={styles.projectTitle}>Database Optimization</p>
-                  <p style={styles.projectSubtitle}>PostgreSQL</p>
-                </div>
-                <span style={styles.projectPercentage}>40%</span>
-              </div>
-              <ProgressBar value={40} />
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Project Progress</CardTitle>
+            <p className="text-sm text-muted-foreground">Current status of your active projects</p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <ProjectProgress title="Website Redesign" subtitle="UI/UX Design" percentage={75} />
+            <ProjectProgress title="Mobile App Development" subtitle="React Native" percentage={60} />
+            <ProjectProgress title="Database Optimization" subtitle="PostgreSQL" percentage={40} />
+          </CardContent>
+        </Card>
       </div>
-      <div style={styles.tableCard}>
-        <h2 style={styles.tableTitle}>Recent Tasks</h2>
-        <p style={styles.tableDescription}>Your recently updated tasks</p>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.tableHeader}>Task</th>
-              <th style={styles.tableHeader}>Status</th>
-              <th style={styles.tableHeader}>Assignee</th>
-              <th style={styles.tableHeader}>Due Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentTasks.map((task) => (
-              <tr key={task.id}>
-                <td style={styles.tableCell}>{task.title}</td>
-                <td style={styles.tableCell}>
-                  <span style={{
-                    ...styles.statusBadge,
-                    backgroundColor: task.status === "Completed" ? "#DEF7EC" : task.status === "In Progress" ? "#E1EFFE" : "#FEF3C7",
-                    color: task.status === "Completed" ? "#03543F" : task.status === "In Progress" ? "#1E429F" : "#92400E"
-                  }}>
-                    {task.status}
-                  </span>
-                </td>
-                <td style={styles.tableCell}>
-                  <div style={styles.assignee}>
-                    <div style={styles.avatar}>{task.assignee[0]}</div>
-                    <span>{task.assignee}</span>
-                  </div>
-                </td>
-                <td style={styles.tableCell}>{task.dueDate}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Tasks</CardTitle>
+          <p className="text-sm text-muted-foreground">Your recently updated tasks</p>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Task</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Assignee</TableHead>
+                <TableHead>Due Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentTasks.map((task) => (
+                <TableRow key={task.id}>
+                  <TableCell>{task.title}</TableCell>
+                  <TableCell>
+                    <Badge variant={task.status === "Completed" ? "success" : task.status === "In Progress" ? "default" : "secondary"}>
+                      {task.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback>{task.assignee[0]}</AvatarFallback>
+                      </Avatar>
+                      <span>{task.assignee}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{task.dueDate}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-const styles = {
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '24px',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    marginBottom: '24px',
-  },
-  cardGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '24px',
-    marginBottom: '24px',
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    padding: '16px',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-  },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '8px',
-  },
-  cardTitle: {
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  cardContent: {},
-  cardValue: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-  },
-  cardSubtitle: {
-    fontSize: '12px',
-    color: '#6B7280',
-  },
-  chartGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(480px, 1fr))',
-    gap: '24px',
-    marginBottom: '24px',
-  },
-  chartCard: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    padding: '16px',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-  },
-  chartTitle: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    marginBottom: '8px',
-  },
-  chartDescription: {
-    fontSize: '14px',
-    color: '#6B7280',
-    marginBottom: '16px',
-  },
-  chart: {
-    height: '200px',
-  },
-  projectList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-  project: {},
-  projectHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '8px',
-  },
-  projectTitle: {
-    fontSize: '14px',
-    fontWeight: '500',
-  },
-  projectSubtitle: {
-    fontSize: '12px',
-    color: '#6B7280',
-  },
-  projectPercentage: {
-    fontSize: '14px',
-    fontWeight: '500',
-  },
-  progressBarContainer: {
-    height: '8px',
-    backgroundColor: '#E5E7EB',
-    borderRadius: '4px',
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#8B5CF6',
-  },
-  tableCard: {
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    padding: '16px',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-  },
-  tableTitle: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    marginBottom: '8px',
-  },
-  tableDescription: {
-    fontSize: '14px',
-    color: '#6B7280',
-    marginBottom: '16px',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
-  tableHeader: {
-    textAlign: 'left',
-    padding: '12px',
-    borderBottom: '1px solid #E5E7EB',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  tableCell: {
-    padding: '12px',
-    borderBottom: '1px solid #E5E7EB',
-  },
-  statusBadge: {
-    display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: '9999px',
-    fontSize: '12px',
-    fontWeight: '500',
-  },
-  assignee: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  avatar: {
-    width: '24px',
-    height: '24px',
-    borderRadius: '50%',
-    backgroundColor: '#E5E7EB',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '12px',
-    fontWeight: '500',
-  },
-};
