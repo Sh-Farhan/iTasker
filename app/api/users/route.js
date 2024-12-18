@@ -1,55 +1,177 @@
 import { NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
-export const dynamic = 'force-static'
+import jwt from "jsonwebtoken";
+import { ObjectId } from "mongodb";
 
-const url =  process.env.MONGODB_URI;
-const client = new MongoClient(url)
+const url = process.env.MONGODB_URI;
+const client = new MongoClient(url);
+const dbName = "iTasker-todos";
 
-const dbName = 'iTasker-todos'
+let cachedClient = null;
 
-export const GET = async () => {
-    try{
+async function connectToDatabase() {
+    if(!cachedClient){
         await client.connect();
-        const db = client.db(dbName);
-        const collection = db.collection('userData');
-        const Result = await collection.find({}).toArray();
-        const data = await JSON.stringify(Result)
-        return new NextResponse(data)
-    } catch(error){
-        return new NextResponse("Error in fetching users" + error.message)
+        cachedClient = client;
+    }
+
+    return cachedClient.db(dbName);
+}
+
+export const GET = async(req) => {
+    try {
+        const token = req.cookies.get("token")?.value || "";
+        const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
+        console.log(decodedToken)
+
+        if(!token){
+            return NextResponse.json(
+              {error: 'Not authenticated'}
+            )
+          }
+      
+          const user = decodedToken.username
+      
+          
+          if (!user) {
+            return NextResponse.json(
+              { error: 'User parameter is required' },
+              { status: 400 }
+            );
+          }
+
+          const db = await connectToDatabase();
+          const collection = db.collection(user)
+          const result = await collection.find({}).toArray();
+
+          return NextResponse.json(result, {status: 200});
+    } catch (error) {
+        console.log("Error fetching users", error);
+        return NextResponse.json(
+            {error: "Error in fetching users: " + error.message},
+            {status: 500}
+        )
     }
 }
 
 export const POST = async (req) => {
-    try {
-        const data = await req.json();
-        await client.connect();
-        const db = client.db(dbName);
-        const collection = db.collection('userData');
-        const insertResult = await collection.insertOne(data);  // Insert the body (password data)
+  try {
+    const token = req.cookies.get("token")?.value || ""; 
+    const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
+    console.log(decodedToken)
 
-        return NextResponse.json({ success: true, result: insertResult });  // Return the result as JSON
-    } catch (error) {
-        return new NextResponse("Error inserting data: " + error.message);
-    } finally {
-        await client.close();  // Ensure the client is closed after the operation
+    if(!token){
+      return NextResponse.json(
+        {error: 'Not authenticated'}
+      )
     }
+    
+    const user = decodedToken.username;
+
+    const data = await req.json();
+    console.log("user is the query is")
+
+    console.log(data)
+
+
+    const db = await connectToDatabase(); 
+    const collection = db.collection(user);
+    const result = await collection.insertOne(data);
+
+    return NextResponse.json(result, { status: 200 });
+  } catch (error) {
+    console.log('Error fetching users:', error);
+    return NextResponse.json(
+      { error: 'Error in fetching users: ' + error.message },
+      { status: 500 }
+    );
+  }
 };
 
 export const DELETE = async(req) => {
-    try{
-        const data = await req.json();
-        console.log(data);
-        await client.connect();
-        const db = client.db(dbName);
-        const collection = db.collection('userData');
-        const Result = await collection.deleteOne(data);
-        return NextResponse.json({succes : true, result: Result,myDel: data})
-    } catch(error){
-        return new NextResponse("Error inserting data: " + error.message);
-    } finally{
-        await client.close();
+  try {
+    const token = req.cookies.get("token")?.value || "";
+    const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
+    console.log(decodedToken);
+
+    if(!token){
+      return NextResponse.json({
+        error : "Not authenticated"
+      })
     }
+
+    const user = decodedToken.username;
+
+    const data = await req.json();
+    console.log("user is the query is")
+
+    console.log(data)
+
+
+    const db = await connectToDatabase(); 
+    const collection = db.collection(user);
+    const result = await collection.deleteOne(data);
+
+    return NextResponse.json(result, { status: 200 });
+  } catch (error) {
+    console.log('Error fetching users:', error);
+    return NextResponse.json(
+      { error: 'Error in fetching users: ' + error.message },
+      { status: 500 }
+    );
+  }
 }
 
- 
+const updateDocumentbyId = async (collection, data) => {
+  try {
+    const id = new ObjectId(data._id);
+
+    const result = await collection.updateOne(
+      {_id: id},
+      {
+        $set: {
+          // your data to be updated
+        },
+      }
+    )
+
+    return {
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+    };
+  } catch (error) {
+    console.log("Error updating document: ", error);
+    throw new Error("Update failed");
+  }
+}
+
+export const PUT = async(req) => {
+  try {
+    const token = req.cookies.get("token")?.value || "";
+    const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
+
+    console.log(decodedToken);
+
+    if(!token){
+      return NextResponse.json({error : "Not authenticated"});
+    }
+
+    const user = decodedToken.username;
+    const data = await req.json();
+    console.log(data);
+
+    const db = await connectToDatabase();
+    const collection = db.collection(user);
+
+    const result = await updateDocumentbyId(collection, data);
+
+    return NextResponse.json(result, {status: 200});
+  } catch (error) {
+    console.log(error.message);
+
+    return NextResponse.json(
+      {error: "Error in fetching users: " + error.message},
+      {status: 500},
+    )
+  }
+}
