@@ -102,7 +102,7 @@ export const DELETE = async(req) => {
 
     const user = decodedToken.username;
 
-    const data = await req.json();
+    const data =  req.json();
     console.log("user is the query is")
 
     console.log(data)
@@ -131,6 +131,8 @@ const updateDocumentbyId = async (collection, data) => {
       {
         $set: {
           // your data to be updated
+          todo: data.todo,
+          status: data.status
         },
       }
     )
