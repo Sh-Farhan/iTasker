@@ -29,9 +29,23 @@ const KanbanTodo = () => {
   ]);
   const [newTask, setNewTask] = useState('');
   const [viewMode, setViewMode] = useState('kanban');
-  const [editingTask, setEditingTask] = useState(null);
+  // const [editingTask, setEditingTask] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+
+  //
+  const [editingTask, setEditingTask] = useState(null);
+const [editingContent, setEditingContent] = useState(''); // Local state for editing content
+
+const startEditingTask = (taskId, currentContent) => {
+  setEditingTask(taskId);
+  setEditingContent(currentContent); // Initialize local state with current content
+};
+
+const saveEditedTask = async (columnId, taskId) => {
+  await editTask(columnId, taskId, editingContent); // Save changes via editTask function
+  setEditingTask(null); // Exit editing mode
+};
 
   useEffect(() => {
     fetchTodos();
@@ -109,36 +123,73 @@ const KanbanTodo = () => {
     }
   }, [columns, toast]);
 
+  // const addTask = async (e) => {
+  //   e.preventDefault();
+  //   if (!newTask.trim()) return;
+  //   const task = {
+  //     content: newTask.trim(),
+  //     status: 'todo'
+  //   };
+  //   try {
+  //     const response = await fetch('/api/users', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify(task),
+  //     });
+  //     if (!response.ok) {
+  //       throw new Error('Failed to add task');
+  //     }
+  //     const addedTask = await response.json();
+  //     setColumns(prevColumns => prevColumns.map(col => {
+  //       if (col.id === 'todo') {
+  //         return { ...col, tasks: [...col.tasks, addedTask] };
+  //       }
+  //       return col;
+  //     }));
+  //     setNewTask('');
+  //     toast({
+  //       title: "Success",
+  //       description: "New task added successfully.",
+  //     });
+  //   } catch (error) {
+  //     console.error('Error adding task:', error);
+  //     toast({
+  //       title: "Error",
+  //       description: "Failed to add task. Please try again.",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
+
   const addTask = async (e) => {
     e.preventDefault();
     if (!newTask.trim()) return;
+    
     const task = {
       content: newTask.trim(),
-      status: 'todo'
+      status: 'todo',
     };
+    
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(task),
       });
       if (!response.ok) {
         throw new Error('Failed to add task');
       }
       const addedTask = await response.json();
-      setColumns(prevColumns => prevColumns.map(col => {
-        if (col.id === 'todo') {
-          return { ...col, tasks: [...col.tasks, addedTask] };
-        }
-        return col;
-      }));
-      setNewTask('');
-      toast({
-        title: "Success",
-        description: "New task added successfully.",
-      });
+      setColumns(prevColumns =>
+        prevColumns.map(col =>
+          col.id === 'todo'
+            ? { ...col, tasks: [...col.tasks, addedTask] } // Add the new task to the 'todo' column
+            : col
+        )
+      );
+      setNewTask(''); // Clear the input field
     } catch (error) {
       console.error('Error adding task:', error);
       toast({
@@ -148,6 +199,7 @@ const KanbanTodo = () => {
       });
     }
   };
+  
 
   const editTask = useCallback(async (columnId, taskId, newContent) => {
     const column = columns.find(col => col.id === columnId);
@@ -225,6 +277,92 @@ const KanbanTodo = () => {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
+  // const renderKanbanView = () => (
+  //   <DragDropContext onDragEnd={onDragEnd}>
+  //     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+  //       {columns.map(column => (
+  //         <Droppable key={column.id} droppableId={column.id}>
+  //           {(provided) => (
+  //             <Card className="bg-secondary">
+  //               <CardHeader className={`${column.color} text-white rounded-t-lg`}>
+  //                 <CardTitle className="flex justify-between items-center">
+  //                   {column.title}
+  //                   <Badge variant="secondary" className="text-xs">
+  //                     {column.tasks.length}
+  //                   </Badge>
+  //                 </CardTitle>
+  //               </CardHeader>
+  //               <CardContent>
+  //                 <ul
+  //                   {...provided.droppableProps}
+  //                   ref={provided.innerRef}
+  //                   className="min-h-[300px] space-y-2"
+  //                 >
+  //                   {column.tasks.map((task, index) => (
+  //                     <Draggable key={task.id} draggableId={task.id} index={index}>
+  //                       {(provided) => (
+  //                         <li
+  //                           ref={provided.innerRef}
+  //                           {...provided.draggableProps}
+  //                           {...provided.dragHandleProps}
+  //                           className="bg-background p-3 rounded-lg shadow-sm border border-border hover:shadow-md transition-shadow duration-200"
+  //                         >
+  //                           {editingTask === task.id ? (
+  //                             <div className="flex items-center gap-2">
+  //                               <Input
+  //                                 value={task.content}
+  //                                 onChange={(e) => editTask(column.id, task.id, e.target.value)}
+  //                                 className="flex-grow"
+  //                               />
+  //                               <Button size="icon" onClick={() => setEditingTask(null)}>
+  //                                 <Check className="h-4 w-4" />
+  //                               </Button>
+  //                             </div>
+  //                           ) : (
+  //                             <div className="flex items-center justify-between">
+  //                               <span>{task.content}</span>
+  //                               <div className="flex gap-2">
+  //                                 <Button size="icon" variant="ghost" onClick={() => setEditingTask(task.id)}>
+  //                                   <Edit className="h-4 w-4" />
+  //                                 </Button>
+  //                                 <AlertDialog>
+  //                                   <AlertDialogTrigger asChild>
+  //                                     <Button size="icon" variant="ghost">
+  //                                       <Trash2 className="h-4 w-4" />
+  //                                     </Button>
+  //                                   </AlertDialogTrigger>
+  //                                   <AlertDialogContent>
+  //                                     <AlertDialogHeader>
+  //                                       <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+  //                                       <AlertDialogDescription>
+  //                                         This action cannot be undone. This will permanently delete the task.
+  //                                       </AlertDialogDescription>
+  //                                     </AlertDialogHeader>
+  //                                     <AlertDialogFooter>
+  //                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
+  //                                       <AlertDialogAction onClick={() => deleteTask(column.id, task.id)}>
+  //                                         Delete
+  //                                       </AlertDialogAction>
+  //                                     </AlertDialogFooter>
+  //                                   </AlertDialogContent>
+  //                                 </AlertDialog>
+  //                               </div>
+  //                             </div>
+  //                           )}
+  //                         </li>
+  //                       )}
+  //                     </Draggable>
+  //                   ))}
+  //                   {provided.placeholder}
+  //                 </ul>
+  //               </CardContent>
+  //             </Card>
+  //           )}
+  //         </Droppable>
+  //       ))}
+  //     </div>
+  //   </DragDropContext>
+  // );
   const renderKanbanView = () => (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -258,11 +396,11 @@ const KanbanTodo = () => {
                             {editingTask === task.id ? (
                               <div className="flex items-center gap-2">
                                 <Input
-                                  value={task.content}
-                                  onChange={(e) => editTask(column.id, task.id, e.target.value)}
+                                  value={editingContent} // Use local state for input value
+                                  onChange={(e) => setEditingContent(e.target.value)} // Update local state
                                   className="flex-grow"
                                 />
-                                <Button size="icon" onClick={() => setEditingTask(null)}>
+                                <Button size="icon" onClick={() => saveEditedTask(column.id, task.id)}>
                                   <Check className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -270,7 +408,7 @@ const KanbanTodo = () => {
                               <div className="flex items-center justify-between">
                                 <span>{task.content}</span>
                                 <div className="flex gap-2">
-                                  <Button size="icon" variant="ghost" onClick={() => setEditingTask(task.id)}>
+                                  <Button size="icon" variant="ghost" onClick={() => startEditingTask(task.id, task.content)}>
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                   <AlertDialog>
@@ -311,7 +449,6 @@ const KanbanTodo = () => {
       </div>
     </DragDropContext>
   );
-
   const renderListView = () => (
     <Card>
       <CardContent>
@@ -420,4 +557,5 @@ const KanbanTodo = () => {
 };
 
 export default KanbanTodo;
+
 

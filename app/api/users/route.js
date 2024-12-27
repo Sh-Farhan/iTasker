@@ -122,21 +122,76 @@ export const DELETE = async(req) => {
   }
 }
 
+// const updateDocumentbyId = async (collection, data) => {
+//   try {
+//     const id = new ObjectId(data._id);
+
+//     const result = await collection.updateOne(
+//       {_id: id},
+//       {
+//         $set: {
+//           // your data to be updated
+//           todo: data.todo,
+//           status: data.status
+//         },
+//       }
+//     )
+
+//     return {
+//       matchedCount: result.matchedCount,
+//       modifiedCount: result.modifiedCount,
+//     };
+//   } catch (error) {
+//     console.log("Error updating document: ", error);
+//     throw new Error("Update failed");
+//   }
+// }
+
+// export const PUT = async(req) => {
+//   try {
+//     const token = req.cookies.get("token")?.value || "";
+//     const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
+
+//     console.log(decodedToken);
+
+//     if(!token){
+//       return NextResponse.json({error : "Not authenticated"});
+//     }
+
+//     const user = decodedToken.username;
+//     const data = await req.json();
+//     console.log(data);
+
+//     const db = await connectToDatabase();
+//     const collection = db.collection(user);
+
+//     const result = await updateDocumentbyId(collection, data);
+
+//     return NextResponse.json(result, {status: 200});
+//   } catch (error) {
+//     console.log(error.message);
+
+//     return NextResponse.json(
+//       {error: "Error in fetching users: " + error.message},
+//       {status: 500},
+//     )
+//   }
+// }
 const updateDocumentbyId = async (collection, data) => {
   try {
-    const id = new ObjectId(data._id);
+    const id = new ObjectId(data._id); // Ensure this is the correct ID format
 
     const result = await collection.updateOne(
-      {_id: id},
+      { _id: id },
       {
         $set: {
-          // your data to be updated
           todo: data.todo,
-          status: data.status
+          status: data.status,
         },
       }
-    )
+    );
 
+    console.log("Update result:", result);
     return {
       matchedCount: result.matchedCount,
       modifiedCount: result.modifiedCount,
@@ -145,35 +200,34 @@ const updateDocumentbyId = async (collection, data) => {
     console.log("Error updating document: ", error);
     throw new Error("Update failed");
   }
-}
+};
 
-export const PUT = async(req) => {
+export const PUT = async (req) => {
   try {
     const token = req.cookies.get("token")?.value || "";
-    const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
-
-    console.log(decodedToken);
-
-    if(!token){
-      return NextResponse.json({error : "Not authenticated"});
+    if (!token) {
+      return NextResponse.json({ error: "Not authenticated" });
     }
+
+    const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
+    console.log("Decoded Token: ", decodedToken);
 
     const user = decodedToken.username;
     const data = await req.json();
-    console.log(data);
+    console.log("Data received from frontend:", data);
 
     const db = await connectToDatabase();
     const collection = db.collection(user);
 
     const result = await updateDocumentbyId(collection, data);
 
-    return NextResponse.json(result, {status: 200});
+    console.log("Update Result:", result);
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    console.log(error.message);
-
+    console.log("Error:", error.message);
     return NextResponse.json(
-      {error: "Error in fetching users: " + error.message},
-      {status: 500},
-    )
+      { error: "Error in updating task: " + error.message },
+      { status: 500 }
+    );
   }
-}
+};
