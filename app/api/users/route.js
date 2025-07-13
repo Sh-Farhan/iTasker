@@ -54,35 +54,66 @@ export const GET = async(req) => {
     }
 }
 
+// export const POST = async (req) => {
+//   try {
+//     const token = req.cookies.get("token")?.value || ""; 
+//     const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
+//     console.log(decodedToken)
+
+//     if(!token){
+//       return NextResponse.json(
+//         {error: 'Not authenticated'}
+//       )
+//     }
+    
+//     const user = decodedToken.username;
+
+//     const data = await req.json();
+//     console.log("user is the query is")
+
+//     console.log(data)
+
+
+//     const db = await connectToDatabase(); 
+//     const collection = db.collection(user);
+//     const result = await collection.insertOne(data);
+
+//     return NextResponse.json(result, { status: 200 });
+//   } catch (error) {
+//     console.log('Error fetching users:', error);
+//     return NextResponse.json(
+//       { error: 'Error in fetching users: ' + error.message },
+//       { status: 500 }
+//     );
+//   }
+// };
 export const POST = async (req) => {
   try {
-    const token = req.cookies.get("token")?.value || ""; 
-    const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
-    console.log(decodedToken)
-
-    if(!token){
-      return NextResponse.json(
-        {error: 'Not authenticated'}
-      )
+    const token = req.cookies.get("token")?.value || "";
+    if (!token) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
-    
+
+    const decodedToken = jwt.verify(token, process.env.TOKEN_SECRET);
     const user = decodedToken.username;
 
     const data = await req.json();
-    console.log("user is the query is")
 
-    console.log(data)
-
-
-    const db = await connectToDatabase(); 
+    const db = await connectToDatabase();
     const collection = db.collection(user);
     const result = await collection.insertOne(data);
 
-    return NextResponse.json(result, { status: 200 });
+    // ✅ Create a full task object to return
+    const insertedTask = {
+      ...data,
+      id: result.insertedId.toString(), // Make sure it's a string for draggableId
+    };
+
+    return NextResponse.json(insertedTask, { status: 200 });
   } catch (error) {
-    console.log('Error fetching users:', error);
+    console.error('Error inserting task:', error);
     return NextResponse.json(
-      { error: 'Error in fetching users: ' + error.message },
+      { error: 'Error inserting task: ' + error.message },
       { status: 500 }
     );
   }
