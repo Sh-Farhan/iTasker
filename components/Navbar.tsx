@@ -1,4 +1,3 @@
-"use client"
 
 // import React, { useState } from 'react';
 // import { Bell, CheckCircle, FolderKanban, Home, PlusCircle, Settings, Users, ChevronDown } from 'lucide-react';
@@ -181,9 +180,18 @@
 
 "use client"
 
-import React from 'react'
-import Link from 'next/link'
-import { Bell, CheckCircle, FolderKanban, Home, Settings, Users, ChevronDown } from 'lucide-react'
+import React, { ReactNode } from "react"
+import Link from "next/link"
+import {
+  Bell,
+  CheckCircle,
+  FolderKanban,
+  Home,
+  Settings,
+  Users,
+  ChevronDown,
+  LucideIcon,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -192,15 +200,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useState } from "react";
 
-const NavItem = ({ href, icon: Icon, children }) => (
+type NavItemProps = {
+  href: string
+  icon: LucideIcon
+  children: ReactNode
+}
+
+const NavItem = ({ href, icon: Icon, children }: NavItemProps) => (
   <Link href={href} className="flex items-center text-white no-underline mr-6">
     <Icon className="w-5 h-5 mr-2" />
     <span className="font-semibold">{children}</span>
   </Link>
 )
 
-const DropdownItem = ({ href, title, description }) => (
+type DropdownItemProps = {
+  href: string
+  title: string
+  description: string
+}
+
+const DropdownItem = ({ href, title, description }: DropdownItemProps) => (
   <DropdownMenuItem asChild>
     <Link href={href} className="flex flex-col">
       <span className="font-semibold">{title}</span>
@@ -209,14 +230,16 @@ const DropdownItem = ({ href, title, description }) => (
   </DropdownMenuItem>
 )
 
-const NavBar = () => {
+const NavBar: React.FC = () => {
+  const [username, setUserName] = useState("XYZ");
   return (
     <nav className="w-full bg-gradient-to-r from-black to-black py-3">
       <div className="max-w-7xl mx-auto flex justify-between items-center px-4">
         <div className="flex items-center">
-          <NavItem href="/dashboard" icon={Home}>Dashboard</NavItem>
-          <NavItem href="/tasks" icon={CheckCircle}>Tasks</NavItem>
-          <NavItem href="/projects" icon={FolderKanban}>Projects</NavItem>
+          <NavItem href="/dashboard" icon={Home} children={undefined}>Dashboard</NavItem>
+          <NavItem href="/tasks" icon={CheckCircle} children={undefined}>Tasks</NavItem>
+          <NavItem href="/projects" icon={FolderKanban} children={undefined}>Projects</NavItem>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="link" className="text-white font-semibold p-0">
@@ -226,19 +249,20 @@ const NavBar = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownItem 
-                href="/team/members" 
-                title="Members" 
+              <DropdownItem
+                href="/team/members"
+                title="Members"
                 description="View and manage team members"
               />
-              <DropdownItem 
-                href="/team/roles" 
-                title="Roles" 
+              <DropdownItem
+                href="/team/roles"
+                title="Roles"
                 description="Manage team roles and permissions"
               />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
         <div className="flex items-center">
           <Button variant="ghost" size="icon" className="text-white mr-4">
             <Bell className="w-5 h-5" />
@@ -248,10 +272,15 @@ const NavBar = () => {
           </Button>
           <div className="flex items-center ml-4">
             <Avatar className="w-8 h-8 mr-2">
-              <AvatarImage src="/placeholder.svg?height=32&width=32" alt="User Avatar" />
+              <AvatarImage
+                src="/placeholder.svg?height=32&width=32"
+                alt="User Avatar"
+              />
               <AvatarFallback>AJ</AvatarFallback>
             </Avatar>
-            <span className="text-white text-sm font-medium">Alex Johnson</span>
+            <span className="text-white text-sm font-medium">
+              {username}
+            </span>
           </div>
         </div>
       </div>
@@ -260,4 +289,5 @@ const NavBar = () => {
 }
 
 export default NavBar
+
 
