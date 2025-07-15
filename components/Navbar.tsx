@@ -230,6 +230,10 @@ const DropdownItem = ({ href, title, description }: DropdownItemProps) => (
   </DropdownMenuItem>
 )
 
+const getDetails = () => {
+  
+}
+
 const NavBar: React.FC = () => {
   const [username, setUserName] = useState("XYZ");
   return (
