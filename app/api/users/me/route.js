@@ -1,52 +1,42 @@
-// import {connect} from '@/dbConfig/dbConfig'
-// import User from '@/models/userModel'
-// import {NextRequest, NextResponse} from 'next/server'
-// import { getDataFromToken } from '@/helpers/tokenData'
-
-// connect();
-
-// export async function POST(req){
-//     // extract data from token
-//     const userId = await getDataFromToken(req);
-//     // console.log(userId)
-//     const user = User.findOne({_id: userId}).select("-password");
-
-//     return NextResponse.json({
-//         message: "User found",
-//         data: user
-//     })
-// }
-import { connect } from '@/dbConfig/dbConfig';
-import User from '@/models/userModel';
-import { NextRequest, NextResponse } from 'next/server';
+import { MongoClient, ObjectId } from 'mongodb';
 import { getDataFromToken } from '@/helpers/tokenData';
+import { NextResponse } from 'next/server';
 
-connect();
+const MONGO_URI = process.env.MONGODB_URI; // ✅ use correct env var
+const dbName = 'iTasker-userdata';
+
+let cachedClient = null;
+
+async function connectToDatabase() {
+  if (!cachedClient) {
+    if (!MONGO_URI) {
+      throw new Error('MONGODB_URI is undefined. Please check your .env.local');
+    }
+
+    cachedClient = new MongoClient(MONGO_URI);
+    await cachedClient.connect();
+  }
+
+  return cachedClient.db(dbName);
+}
 
 export async function POST(req) {
   try {
-    // Extract user ID from token
+    const db = await connectToDatabase();
     const userId = await getDataFromToken(req);
 
-    // Query the user and select everything except the password
-    const user = await User.findOne({ _id: userId }).select('-password').lean(); // Use 'await' and 'lean()'
+    const user = await db.collection('users').findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { password: 0 } }
+    );
 
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
-    // Return the user data
-    return NextResponse.json({
-      message: 'User found',
-      data: user,
-    });
-  } catch (error) {
-    console.error('Error:', error);
-
-    // Handle any unexpected errors
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'User found', data: user });
+  } catch (err) {
+    console.error('Error:', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
