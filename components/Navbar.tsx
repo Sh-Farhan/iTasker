@@ -246,7 +246,7 @@ const NavBar: React.FC = () => {
       console.log(error);
     }
   }
-
+// checking
   useEffect(() => {
     getDetails();
   }, [])
