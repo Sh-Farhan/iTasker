@@ -180,7 +180,7 @@
 
 "use client"
 
-import React, { ReactNode } from "react"
+import React, { ReactNode, useEffect } from "react"
 import Link from "next/link"
 import {
   Bell,
@@ -201,6 +201,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useState } from "react";
+import axios from "axios"
 
 type NavItemProps = {
   href: string
@@ -230,19 +231,32 @@ const DropdownItem = ({ href, title, description }: DropdownItemProps) => (
   </DropdownMenuItem>
 )
 
-const getDetails = () => {
-  
-}
 
 const NavBar: React.FC = () => {
+
   const [username, setUserName] = useState("XYZ");
+
+  const getDetails = async () => {
+    try {
+      const response = await axios.post("api/users/me");
+      console.log("hello",response.data.data);
+      const {username} = response.data.data;
+      setUserName(username);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  useEffect(() => {
+    getDetails();
+  }, [])
   return (
     <nav className="w-full bg-gradient-to-r from-black to-black py-3">
       <div className="max-w-7xl mx-auto flex justify-between items-center px-4">
         <div className="flex items-center">
-          <NavItem href="/dashboard" icon={Home} children={undefined}>Dashboard</NavItem>
-          <NavItem href="/tasks" icon={CheckCircle} children={undefined}>Tasks</NavItem>
-          <NavItem href="/projects" icon={FolderKanban} children={undefined}>Projects</NavItem>
+          <NavItem href="/dashboard" icon={Home}>Dashboard</NavItem>
+          <NavItem href="/tasks" icon={CheckCircle}>Tasks</NavItem>
+          <NavItem href="/projects" icon={FolderKanban}>Projects</NavItem>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
