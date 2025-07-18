@@ -75,6 +75,8 @@ const KanbanTodo = () => {
     fetchTodos();
   }, []);
 
+  // check
+
   const fetchTodos = async () => {
     try {
       const response = await fetch("/api/users");
