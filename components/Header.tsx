@@ -19,7 +19,7 @@ const Header: React.FC = () => {
             Simplify Your Day, Amplify Your Productivity
           </p>
           <Button asChild size="lg" variant="secondary">
-            <Link href="/get-started">Get Started</Link>
+            <Link href="/login">Get Started</Link>
           </Button>
         </div>
       </div>

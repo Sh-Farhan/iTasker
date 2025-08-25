@@ -225,30 +225,6 @@ const addTask = async (e: React.FormEvent) => {
     [columns, toast]
   );
 
-  // const deleteTask = useCallback(
-  //   async (columnId: string, taskId: string) => {
-  //     try {
-  //       const res = await fetch(`/api/users`, { method: "DELETE" });
-  //       if (!res.ok) throw new Error();
-
-  //       setColumns((prev) =>
-  //         prev.map((col) =>
-  //           col.id === columnId
-  //             ? { ...col, tasks: col.tasks.filter((t) => t.id !== taskId) }
-  //             : col
-  //         )
-  //       );
-  //       toast({ title: "Deleted", description: "Task removed." });
-  //     } catch {
-  //       toast({
-  //         title: "Error",
-  //         description: "Failed to delete task.",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   },
-  //   [toast]
-  // );
 const deleteTask = useCallback(async (columnId, taskId) => {
   try {
     const response = await fetch(`/api/users`, {
