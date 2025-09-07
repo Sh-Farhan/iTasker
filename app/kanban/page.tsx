@@ -1665,7 +1665,9 @@ const KanbanTodo = () => {
   return (
     <div className="container mx-auto p-6 max-w-6xl">
       <div className="text-center mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold mb-2 text-balance text-foreground">i-Tasker</h1>
+        <h1 className="text-4xl md:text-5xl font-bold mb-2 text-balance text-foreground">i-Tasker
+          
+        </h1>
         <p className="text-muted-foreground text-lg">Organize your tasks with style</p>
       </div>
 

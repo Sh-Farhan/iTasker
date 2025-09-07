@@ -90,11 +90,11 @@ export default function LoginPage() {
         toast({
           title: "Success",
           description: "You are logged in!",
-          status: "success",
+          // status: "success",
           duration: 5000,
-          isClosable: true,
+          // isClosable: true,
         });
-        router.push('/tasks')
+        router.push('/kanban')
       } catch (error) {
         // Log and display the error
         console.error("Axios Error:", error);
@@ -104,9 +104,9 @@ export default function LoginPage() {
         toast({
           title: "Login Failed",
           description: errorMessage,
-          status: "error",
+          // status: "error",
           duration: 5000,
-          isClosable: true,
+          // isClosable: true,
         });
       }
     }

@@ -255,7 +255,7 @@ const NavBar: React.FC = () => {
       <div className="max-w-7xl mx-auto flex justify-between items-center px-4">
         <div className="flex items-center">
           <NavItem href="/dashboard" icon={Home}>Dashboard</NavItem>
-          <NavItem href="/tasks" icon={CheckCircle}>Tasks</NavItem>
+          <NavItem href="/kanban" icon={CheckCircle}>Tasks</NavItem>
           <NavItem href="/projects" icon={FolderKanban}>Projects</NavItem>
 
           <DropdownMenu>
