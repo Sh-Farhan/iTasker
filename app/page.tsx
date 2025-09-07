@@ -26,6 +26,7 @@ export default function Home() {
   return (
     <>
     {/* <Manager></Manager> */}
+    {/* <div>hi</div> */}
     <Header></Header>
     </>
   );
