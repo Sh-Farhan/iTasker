@@ -362,11 +362,10 @@ export const POST = async (req) => {
     const newTask = { content, status };
     const result = await collection.insertOne(newTask);
 
-    // ✅ Return the complete task object with the new ID
     return NextResponse.json({
         ...newTask,
         id: result.insertedId.toString(),
-    }, { status: 201 }); // 201 Created is more appropriate
+    }, { status: 201 });
 
   } catch (error) {
     console.error("Error creating task:", error);

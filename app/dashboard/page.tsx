@@ -1,6 +1,6 @@
   "use client"
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { CheckCircle2, Clock, ListTodo, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -60,11 +60,32 @@ const ProjectProgress = ({ title, subtitle, percentage }) => (
 );
 
 export default function UserDashboard() {
+  const [totalTasks, setTotalTasks] = React.useState(0);
+
+  useEffect(() => {
+    fetchTodos()
+  }, []);
+
+  const fetchTodos = async () =>{
+    try {
+      const response = await fetch("/api/users");
+      if(!response.ok) throw new Error("Failed to fetch todos @dashboard");
+
+      const tasks = await response.json()
+
+      setTotalTasks(tasks.length);
+
+      console.log(tasks);
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Welcome back, Alex!</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <DashboardCard title="Total Tasks" value="24" subtitle="4 completed this week" icon={ListTodo} />
+        <DashboardCard title="Total Tasks" value={totalTasks} subtitle="4 completed this week" icon={ListTodo} />
         <DashboardCard title="In Progress" value="8" subtitle="2 due today" icon={Clock} />
         <DashboardCard title="Completed" value="16" subtitle="3 completed today" icon={CheckCircle2} />
         <DashboardCard title="Team Members" value="6" subtitle="2 active now" icon={Users} />
