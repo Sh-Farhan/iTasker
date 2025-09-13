@@ -61,6 +61,10 @@ const ProjectProgress = ({ title, subtitle, percentage }) => (
 
 export default function UserDashboard() {
   const [totalTasks, setTotalTasks] = React.useState(0);
+  const [todoTasks, setTodoTasks] = React.useState(0);
+  const [inProgressTasks, setInProgressTasks] = React.useState(0);
+  const [completedTasks, setCompletedTasks] = React.useState(0);
+  const [teamMembers, setTeamMembers] = React.useState(0);
 
   useEffect(() => {
     fetchTodos()
@@ -71,11 +75,20 @@ export default function UserDashboard() {
       const response = await fetch("/api/users");
       if(!response.ok) throw new Error("Failed to fetch todos @dashboard");
 
-      const tasks = await response.json()
+      const tasks = await response.json();
+      console.log(tasks); // for debugging
 
       setTotalTasks(tasks.length);
 
-      console.log(tasks);
+      const todo = tasks.filter(task => task.status === "todo").length;
+      setTodoTasks(todo);
+
+      const inProgress = tasks.filter(task => task.status === "inprogress").length;
+      setInProgressTasks(inProgress);
+
+      const doneTasks = tasks.filter(task => task.status === "done").length;
+      setCompletedTasks(doneTasks);
+
     } catch (error) {
       console.log(error)
     }
@@ -86,8 +99,8 @@ export default function UserDashboard() {
       <h1 className="text-3xl font-bold mb-6">Welcome back, Alex!</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <DashboardCard title="Total Tasks" value={totalTasks} subtitle="4 completed this week" icon={ListTodo} />
-        <DashboardCard title="In Progress" value="8" subtitle="2 due today" icon={Clock} />
-        <DashboardCard title="Completed" value="16" subtitle="3 completed today" icon={CheckCircle2} />
+        <DashboardCard title="In Progress" value={inProgressTasks} subtitle="2 due today" icon={Clock} />
+        <DashboardCard title="Completed" value={completedTasks} subtitle="3 completed today" icon={CheckCircle2} />
         <DashboardCard title="Team Members" value="6" subtitle="2 active now" icon={Users} />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
