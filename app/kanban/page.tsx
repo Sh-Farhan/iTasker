@@ -35,11 +35,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-// import AiAssistant from "@/components/ai-assistant"
 import AiAssistant from "@/components/ai_assistant"
+import { Subtask, Task, Column } from "@/app/types/task"
 
 const KanbanTodo = () => {
-  const [columns, setColumns] = useState([
+  const [columns, setColumns] = useState<Column[]>([
     { id: "todo", title: "To Do", tasks: [], color: "bg-primary", textColor: "text-primary" },
     {
       id: "inprogress",
@@ -62,6 +62,9 @@ const KanbanTodo = () => {
   const [sortField, setSortField] = useState<"content" | "status" | "none">("none")
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+
+  // Subtask States
+  const [newSubtaskContent, setNewSubtaskContent] = useState<{ [key: string]: string }>({});
 
   const allTasks = useMemo(() => {
     return columns.flatMap((column) =>
@@ -129,7 +132,7 @@ const KanbanTodo = () => {
       const response = await fetch("/api/users")
       if (!response.ok) throw new Error("Failed to fetch tasks")
 
-      const tasks = await response.json()
+      const tasks: Task[] = await response.json()
       setColumns((prev) =>
         prev.map((col) => ({
           ...col,
@@ -156,17 +159,45 @@ const KanbanTodo = () => {
       setDraggedTask(null)
       if (!result.destination) return
 
-      const { source, destination } = result
-      const sourceCol = columns.find((col) => col.id === source.droppableId)
-      const destCol = columns.find((col) => col.id === destination.droppableId)
+      const { source, destination, type } = result;
+
+      // Handle Subtask Reordering
+      if (type === 'SUBTASK') {
+        const sourceColumn = columns.find(col => col.tasks.some(t => t.id === source.droppableId));
+        if (!sourceColumn) return;
+
+        const task = sourceColumn.tasks.find(t => t.id === source.droppableId);
+        if (!task) return;
+
+        const newSubtasks = Array.from(task.subtasks);
+        const [reorderedItem] = newSubtasks.splice(source.index, 1);
+        newSubtasks.splice(destination.index, 0, reorderedItem);
+
+        const updatedTask = { ...task, subtasks: newSubtasks };
+
+        // Optimistically update UI
+        setColumns(prev => prev.map(col => ({
+          ...col,
+          tasks: col.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
+        })));
+
+        // Update backend
+        await editTask(sourceColumn.id, task.id, task.content, newSubtasks);
+        return;
+      }
+
+
+      const { source: sourceTask, destination: destTask } = result
+      const sourceCol = columns.find((col) => col.id === sourceTask.droppableId)
+      const destCol = columns.find((col) => col.id === destTask.droppableId)
 
       if (!sourceCol || !destCol) return
 
       const sourceTasks = [...sourceCol.tasks]
       const destTasks = [...destCol.tasks]
-      const [moved] = sourceTasks.splice(source.index, 1)
+      const [moved] = sourceTasks.splice(sourceTask.index, 1)
       const updated = { ...moved, status: destCol.id }
-      destTasks.splice(destination.index, 0, updated)
+      destTasks.splice(destTask.index, 0, updated)
 
       setColumns((prev) =>
         prev.map((col) => {
@@ -206,6 +237,7 @@ const KanbanTodo = () => {
     const task = {
       content: newTask.trim(),
       status: "todo",
+      subtasks: [],
     }
 
     try {
@@ -246,7 +278,7 @@ const KanbanTodo = () => {
       try {
         const created: any[] = []
         for (const t of tasks) {
-          const payload = { content: t.title + (t.description ? ` — ${t.description}` : ""), status }
+          const payload = { content: t.title + (t.description ? ` — ${t.description}` : ""), status, subtasks: [] }
           const res = await fetch("/api/users", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -280,12 +312,12 @@ const KanbanTodo = () => {
   }, [columns])
 
   const editTask = useCallback(
-    async (columnId: string, taskId: string, content: string) => {
+    async (columnId: string, taskId: string, content: string, subtasks?: Subtask[]) => {
       const column = columns.find((col) => col.id === columnId)
       const task = column?.tasks.find((t) => t.id === taskId)
       if (!task) return
 
-      const updated = { ...task, content }
+      const updated = { ...task, content, subtasks: subtasks || task.subtasks }
 
       try {
         const res = await fetch(`/api/users`, {
@@ -305,7 +337,9 @@ const KanbanTodo = () => {
               : col,
           ),
         )
-        toast({ title: "Updated", description: "Task updated successfully!" })
+        if (!subtasks) {
+            toast({ title: "Updated", description: "Task updated successfully!" })
+        }
       } catch {
         toast({
           title: "Error",
@@ -359,7 +393,49 @@ const KanbanTodo = () => {
       }
     },
     [toast],
-  )
+  );
+
+  // Subtask Functions
+  const handleAddSubtask = async (columnId: string, taskId: string) => {
+    const content = newSubtaskContent[taskId]?.trim();
+    if (!content) return;
+
+    const column = columns.find(c => c.id === columnId);
+    const task = column?.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const newSubtask: Subtask = {
+      id: new Date().toISOString(), // Temporary ID, backend will generate one
+      content,
+      completed: false,
+    };
+    
+    const updatedSubtasks = [...task.subtasks, newSubtask];
+    await editTask(columnId, taskId, task.content, updatedSubtasks);
+
+    setNewSubtaskContent(prev => ({ ...prev, [taskId]: "" }));
+  };
+
+  const handleToggleSubtask = async (columnId: string, taskId: string, subtaskId: string) => {
+    const column = columns.find(c => c.id === columnId);
+    const task = column?.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedSubtasks = task.subtasks.map(sub => 
+      sub.id === subtaskId ? { ...sub, completed: !sub.completed } : sub
+    );
+    await editTask(columnId, taskId, task.content, updatedSubtasks);
+  };
+  
+  const handleDeleteSubtask = async (columnId: string, taskId: string, subtaskId: string) => {
+    const column = columns.find(c => c.id === columnId);
+    const task = column?.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    const updatedSubtasks = task.subtasks.filter(sub => sub.id !== subtaskId);
+    await editTask(columnId, taskId, task.content, updatedSubtasks);
+  };
+
 
   const updateTaskStatus = useCallback(
     async (taskId: string, newStatus: string) => {
@@ -387,7 +463,7 @@ const KanbanTodo = () => {
             if (col.id === newStatus) {
               return {
                 ...col,
-                tasks: [...col.tasks, { ...currentTask, status: newStatus }],
+                tasks: [...col.tasks, { ...currentTask, status: newStatus, subtasks: currentTask.subtasks || [] }],
               }
             }
             return col
@@ -512,6 +588,54 @@ const KanbanTodo = () => {
                                   </div>
                                 </div>
                               )}
+                              {/* Subtasks Section */}
+                              <div className="mt-4 space-y-2">
+                                <Droppable droppableId={task.id} type="SUBTASK">
+                                  {(provided) => (
+                                    <ul {...provided.droppableProps} ref={provided.innerRef}>
+                                      {task.subtasks.map((subtask, index) => (
+                                        <Draggable key={subtask.id} draggableId={subtask.id} index={index}>
+                                          {(provided) => (
+                                            <li ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="flex items-center gap-2 group">
+                                              <input
+                                                type="checkbox"
+                                                checked={subtask.completed}
+                                                onChange={() => handleToggleSubtask(column.id, task.id, subtask.id)}
+                                              />
+                                              <span className={`text-sm ${subtask.completed ? 'line-through text-muted-foreground' : ''}`}>
+                                                {subtask.content}
+                                              </span>
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                                                onClick={() => handleDeleteSubtask(column.id, task.id, subtask.id)}
+                                              >
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </li>
+                                          )}
+                                        </Draggable>
+                                      ))}
+                                      {provided.placeholder}
+                                    </ul>
+                                  )}
+                                </Droppable>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    value={newSubtaskContent[task.id] || ""}
+                                    onChange={(e) => setNewSubtaskContent(prev => ({ ...prev, [task.id]: e.target.value }))}
+                                    placeholder="Add subtask..."
+                                    className="h-8"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        handleAddSubtask(column.id, task.id);
+                                      }
+                                    }}
+                                  />
+                                  <Button size="sm" onClick={() => handleAddSubtask(column.id, task.id)}>Add</Button>
+                                </div>
+                              </div>
                             </li>
                           )}
                         </Draggable>
