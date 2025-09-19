@@ -1,32 +1,39 @@
-// import { NextResponse } from "next/server"
-// import { generateText } from "ai"
-// import { xai } from "@ai-sdk/xai"
 
+// import { NextResponse } from "next/server";
+// import { generateText } from "ai";
+// import { xai } from "@ai-sdk/xai";
+
+// // IMPORTANT: Do NOT set runtime='edge' when using the AI SDK here.
 
 // export async function GET() {
 //   return NextResponse.json({
 //     endpoint: "/api/ai/generate",
 //     methods: ["GET", "POST"],
-//     usage: "POST with JSON body: { intent: 'generate'|'summarize', prompt?: string, board?: { columns: [...] } }",
+//     usage:
+//       "POST with JSON body: { intent: 'generate'|'summarize', prompt?: string, board?: { columns: [...] } }",
 //     note: "Visiting this endpoint in a browser issues GET and returns this info.",
-//   })
+//   });
 // }
 
 // export async function POST(req: Request) {
 //   try {
-//     const { intent, prompt, board } = await req.json()
+//     const { intent, prompt, board } = await req.json();
 
 //     if (!intent || (intent !== "generate" && intent !== "summarize")) {
-//       return NextResponse.json({ error: "Invalid intent" }, { status: 400 })
+//       return NextResponse.json({ error: "Invalid intent" }, { status: 400 });
 //     }
 
+//     // Define the model once to avoid repetition
+//     const model = xai(process.env.XAI_MODEL || "grok-4");
+
+//     // Use if/else if for clear, distinct logic paths
 //     if (intent === "generate") {
 //       if (!prompt || typeof prompt !== "string") {
-//         return NextResponse.json({ error: "Missing prompt" }, { status: 400 })
+//         return NextResponse.json({ error: "Missing prompt" }, { status: 400 });
 //       }
 
 //       const { text } = await generateText({
-//         model: xai("grok-4"),
+//         model: model,
 //         prompt: `
 // Act as a helpful project assistant. Generate a concise set of Kanban tasks from the user's request.
 
@@ -47,31 +54,30 @@
 // - Keep descriptions brief (<= 2 sentences).
 // - NEVER include markdown or extra commentary—JSON only.
 //         `,
-//       })
+//       });
 
-//       let data: any
+//       let data: any;
 //       try {
-//         data = JSON.parse(text)
-//       } catch {
-//         data = {
-//           columns: [
-//             { id: "todo", title: "To Do", tasks: [{ title: "First task", description: "Describe this task." }] },
-//             { id: "inprogress", title: "In Progress", tasks: [] },
-//             { id: "done", title: "Done", tasks: [] },
-//           ],
-//         }
+//         data = JSON.parse(text);
+//       } catch (error) {
+//         // Log the malformed response for debugging
+//         console.error("Failed to parse AI JSON response:", text); 
+//         // Return a meaningful error to the client
+//         return NextResponse.json(
+//           { error: "The AI returned an invalid JSON response. Please try again." },
+//           { status: 500 }
+//         );
+//       }
+//       return NextResponse.json({ result: data });
+
+//     } else if (intent === "summarize") {
+//       if (!board) {
+//         return NextResponse.json({ error: "Missing board for summarize" }, { status: 400 });
 //       }
 
-//       return NextResponse.json({ result: data })
-//     }
-
-//     if (!board) {
-//       return NextResponse.json({ error: "Missing board for summarize" }, { status: 400 })
-//     }
-
-//     const { text } = await generateText({
-//       model: xai("grok-4"),
-//       prompt: `
+//       const { text } = await generateText({
+//         model: model,
+//         prompt: `
 // You are a succinct project analyst. Summarize this Kanban board.
 
 // Board JSON:
@@ -83,21 +89,23 @@
 // - Next 3 recommended tasks to start.
 
 // Keep under 120 words. Plain text only.
-//       `,
-//     })
-
-//     return NextResponse.json({ summary: text })
+//         `,
+//       });
+//       return NextResponse.json({ summary: text });
+//     }
+    
 //   } catch (error: any) {
+//     // Top-level catch for all other errors
 //     return NextResponse.json(
 //       { error: error?.message || "AI request failed. Ensure the Grok (xAI) integration is configured (XAI_API_KEY)." },
-//       { status: 500 },
-//     )
+//       { status: 500 }
+//     );
 //   }
 // }
 
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
-import { xai } from "@ai-sdk/xai";
+import { google } from "@ai-sdk/google"; // Changed from 'xai'
 
 // IMPORTANT: Do NOT set runtime='edge' when using the AI SDK here.
 
@@ -119,10 +127,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid intent" }, { status: 400 });
     }
 
-    // Define the model once to avoid repetition
-    const model = xai(process.env.XAI_MODEL || "grok-4");
+    const model = google("models/gemini-1.5-flash-latest");
 
-    // Use if/else if for clear, distinct logic paths
     if (intent === "generate") {
       if (!prompt || typeof prompt !== "string") {
         return NextResponse.json({ error: "Missing prompt" }, { status: 400 });
@@ -154,11 +160,11 @@ Rules:
 
       let data: any;
       try {
-        data = JSON.parse(text);
+        // **FIX: Clean the AI response before parsing**
+        const cleanedText = text.replace(/```json\n|```/g, "");
+        data = JSON.parse(cleanedText);
       } catch (error) {
-        // Log the malformed response for debugging
-        console.error("Failed to parse AI JSON response:", text); 
-        // Return a meaningful error to the client
+        console.error("Failed to parse AI JSON response:", text);
         return NextResponse.json(
           { error: "The AI returned an invalid JSON response. Please try again." },
           { status: 500 }
@@ -191,9 +197,8 @@ Keep under 120 words. Plain text only.
     }
     
   } catch (error: any) {
-    // Top-level catch for all other errors
     return NextResponse.json(
-      { error: error?.message || "AI request failed. Ensure the Grok (xAI) integration is configured (XAI_API_KEY)." },
+      { error: error?.message || "AI request failed. Ensure the Google AI integration is configured (GOOGLE_GENERATIVE_AI_API_KEY)." },
       { status: 500 }
     );
   }
