@@ -15,6 +15,7 @@
 //   ArrowUpDown,
 //   ArrowUp,
 //   ArrowDown,
+//   Calendar as CalendarIcon,
 // } from "lucide-react"
 // import { Button } from "@/components/ui/button"
 // import { Input } from "@/components/ui/input"
@@ -37,6 +38,10 @@
 // import { useToast } from "@/hooks/use-toast"
 // import AiAssistant from "@/components/ai_assistant"
 // import { Subtask, Task, Column } from "@/app/types/task"
+// import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+// import { Calendar } from "@/components/ui/calendar"
+// import { format } from "date-fns"
+// import { cn } from "@/lib/utils"
 
 // const KanbanTodo = () => {
 //   const [columns, setColumns] = useState<Column[]>([
@@ -51,6 +56,7 @@
 //     { id: "done", title: "Done", tasks: [], color: "bg-emerald-500", textColor: "text-emerald-500" },
 //   ])
 //   const [newTask, setNewTask] = useState("")
+//   const [dueDate, setDueDate] = useState<Date | undefined>()
 //   const [viewMode, setViewMode] = useState("kanban")
 //   const [isLoading, setIsLoading] = useState(true)
 //   const { toast } = useToast()
@@ -238,6 +244,7 @@
 //       content: newTask.trim(),
 //       status: "todo",
 //       subtasks: [],
+//       dueDate: dueDate ? dueDate.toISOString() : undefined,
 //     }
 
 //     try {
@@ -258,6 +265,7 @@
 //       )
 
 //       setNewTask("")
+//       setDueDate(undefined)
 //       toast({
 //         title: "Task Added!",
 //         description: "Your new task has been created successfully.",
@@ -588,6 +596,15 @@
 //                                   </div>
 //                                 </div>
 //                               )}
+
+//                               {/* <div className="text-xs text-gray-500 mt-2">
+//                                 Created: {new Date(task.createdAt).toLocaleDateString()}
+//                               </div> */}
+//                               {task.dueDate && (
+//                                 <div className="text-xs text-gray-500">
+//                                   Due: {new Date(task.dueDate).toLocaleDateString()}
+//                                 </div>
+//                               )}
 //                               {/* Subtasks Section */}
 //                               <div className="mt-4 space-y-2">
 //                                 <Droppable droppableId={task.id} type="SUBTASK">
@@ -897,6 +914,28 @@
 //             placeholder="What needs to be done?"
 //             className="flex-grow h-12 text-base border-border focus:border-primary transition-colors"
 //           />
+//           <Popover>
+//             <PopoverTrigger asChild>
+//               <Button
+//                 variant={"outline"}
+//                 className={cn(
+//                   "w-[280px] justify-start text-left font-normal h-12",
+//                   !dueDate && "text-muted-foreground"
+//                 )}
+//               >
+//                 <CalendarIcon className="mr-2 h-4 w-4" />
+//                 {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+//               </Button>
+//             </PopoverTrigger>
+//             <PopoverContent className="w-auto p-0">
+//               <Calendar
+//                 mode="single"
+//                 selected={dueDate}
+//                 onSelect={setDueDate}
+//                 initialFocus
+//               />
+//             </PopoverContent>
+//           </Popover>
 //           <Button type="submit" className="h-12 px-6 bg-primary hover:bg-primary/90 transition-all hover:scale-105">
 //             <Plus className="mr-2 h-5 w-5" /> Add Task
 //           </Button>
@@ -933,6 +972,7 @@
 // }
 
 // export default KanbanTodo
+
 "use client"
 
 import type React from "react"
@@ -951,6 +991,7 @@ import {
   ArrowUp,
   ArrowDown,
   Calendar as CalendarIcon,
+  ListTree,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -977,6 +1018,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { SubtaskModal } from "@/components/SubtaskModal"
 
 const KanbanTodo = () => {
   const [columns, setColumns] = useState<Column[]>([
@@ -1006,6 +1048,28 @@ const KanbanTodo = () => {
 
   // Subtask States
   const [newSubtaskContent, setNewSubtaskContent] = useState<{ [key: string]: string }>({});
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isSubtaskModalOpen, setIsSubtaskModalOpen] = useState(false);
+
+  const handleOpenSubtaskModal = (task: Task) => {
+    setSelectedTask(task);
+    setIsSubtaskModalOpen(true);
+  };
+
+  const handleUpdateTaskFromModal = async (updatedTask: Task) => {
+    const column = columns.find(col => col.tasks.some(t => t.id === updatedTask.id));
+    if (column) {
+      // Immediately update the frontend state for a responsive feel
+      setColumns(prev => prev.map(col => ({
+        ...col,
+        tasks: col.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
+      })));
+      
+      // Then, send the update to the backend
+      await editTask(column.id, updatedTask.id, updatedTask.content, updatedTask.subtasks);
+    }
+  };
+
 
   const allTasks = useMemo(() => {
     return columns.flatMap((column) =>
@@ -1423,6 +1487,222 @@ const KanbanTodo = () => {
     },
     [allTasks, toast],
   )
+  
+  const renderListView = () => (
+    <div className="space-y-6">
+      {/* Search and Filter Controls */}
+      <Card className="bg-card shadow-sm border-0">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-48 h-10">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="todo">To Do</SelectItem>
+                <SelectItem value="inprogress">In Progress</SelectItem>
+                <SelectItem value="done">Done</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="text-sm text-muted-foreground flex items-center">
+              {filteredAndSortedTasks.length} of {allTasks.length} tasks
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+  
+      {/* Tasks Table */}
+      <Card className="bg-card shadow-sm border-0">
+        <CardContent className="p-0">
+          <div className="max-h-[300px] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b">
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead className="min-w-[300px]">
+                    <Button
+                      variant="ghost"
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort("content")}
+                    >
+                      Task
+                      {sortField === "content" &&
+                        (sortDirection === "asc" ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        ))}
+                      {sortField !== "content" && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead>Subtasks</TableHead>
+                  <TableHead className="w-40">
+                    <Button
+                      variant="ghost"
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort("status")}
+                    >
+                      Status
+                      {sortField === "status" &&
+                        (sortDirection === "asc" ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        ))}
+                      {sortField !== "status" && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="w-32 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAndSortedTasks.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center">
+                      <div className="flex flex-col items-center justify-center text-muted-foreground">
+                        <Sparkles className="w-8 h-8 mb-2" />
+                        <p className="font-medium">No tasks found</p>
+                        <p className="text-sm">Try adjusting your search or filters</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAndSortedTasks.map((task, index) => (
+                    <TableRow key={task.id} className="group hover:bg-muted/50">
+                      <TableCell className="font-mono text-sm text-muted-foreground">{index + 1}</TableCell>
+                      <TableCell>
+                        {editingTask === task.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editingContent}
+                              onChange={(e) => setEditingContent(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveEditedTask(task.status, task.id)
+                                if (e.key === "Escape") {
+                                  setEditingTask(null)
+                                  setEditingContent("")
+                                }
+                              }}
+                              className="flex-grow border-primary/20 focus:border-primary"
+                              autoFocus
+                            />
+                            <Button
+                              size="icon"
+                              onClick={() => saveEditedTask(task.status, task.id)}
+                              className="bg-primary hover:bg-primary/90 transition-colors h-8 w-8"
+                              aria-label="Save task"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="font-medium text-foreground leading-relaxed">{task.content}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={() => handleOpenSubtaskModal(task)}>
+                          <ListTree className="h-4 w-4 mr-2" />
+                          {task.subtasks.length}
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        <Select value={task.status} onValueChange={(newStatus) => updateTaskStatus(task.id, newStatus)}>
+                          <SelectTrigger className="w-full h-8">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${task.statusColor}`} />
+                              <SelectValue />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="todo">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-primary" />
+                                To Do
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="inprogress">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                                In Progress
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="done">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                Done
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
+                            onClick={() => startEditingTask(task.id, task.content)}
+                            aria-label="Edit task"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                                aria-label="Delete task"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="border-0 shadow-2xl">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-foreground">Delete Task?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-muted-foreground">
+                                  This action cannot be undone. The task will be permanently removed.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="border-border">Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteTask(task.status, task.id)}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+      <SubtaskModal 
+        task={selectedTask}
+        isOpen={isSubtaskModalOpen}
+        onClose={() => setIsSubtaskModalOpen(false)}
+        onUpdateTask={handleUpdateTaskFromModal}
+      />
+    </div>
+  )
 
   const renderKanbanView = () => (
     <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
@@ -1532,12 +1812,9 @@ const KanbanTodo = () => {
                                 </div>
                               )}
 
-                              {/* <div className="text-xs text-gray-500 mt-2">
-                                Created: {new Date(task.createdAt).toLocaleDateString()}
-                              </div> */}
                               {task.dueDate && (
-                                <div className="text-xs text-gray-500">
-                                  Due: {new Date(task.dueDate).toLocaleDateString()}
+                                <div className="text-xs text-gray-500 mt-2">
+                                  Due: {formatDate(task.dueDate)}
                                 </div>
                               )}
                               {/* Subtasks Section */}
@@ -1613,209 +1890,6 @@ const KanbanTodo = () => {
     </DragDropContext>
   )
 
-  const renderListView = () => (
-    <div className="space-y-6">
-      {/* Search and Filter Controls */}
-      <Card className="bg-card shadow-sm border-0">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search tasks..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48 h-10">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="todo">To Do</SelectItem>
-                <SelectItem value="inprogress">In Progress</SelectItem>
-                <SelectItem value="done">Done</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="text-sm text-muted-foreground flex items-center">
-              {filteredAndSortedTasks.length} of {allTasks.length} tasks
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tasks Table */}
-      <Card className="bg-card shadow-sm border-0">
-        <CardContent className="p-0">
-          <div className="max-h-[300px] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b">
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead className="min-w-[300px]">
-                    <Button
-                      variant="ghost"
-                      className="h-auto p-0 font-semibold hover:bg-transparent"
-                      onClick={() => handleSort("content")}
-                    >
-                      Task
-                      {sortField === "content" &&
-                        (sortDirection === "asc" ? (
-                          <ArrowUp className="ml-2 h-4 w-4" />
-                        ) : (
-                          <ArrowDown className="ml-2 h-4 w-4" />
-                        ))}
-                      {sortField !== "content" && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
-                    </Button>
-                  </TableHead>
-                  <TableHead className="w-40">
-                    <Button
-                      variant="ghost"
-                      className="h-auto p-0 font-semibold hover:bg-transparent"
-                      onClick={() => handleSort("status")}
-                    >
-                      Status
-                      {sortField === "status" &&
-                        (sortDirection === "asc" ? (
-                          <ArrowUp className="ml-2 h-4 w-4" />
-                        ) : (
-                          <ArrowDown className="ml-2 h-4 w-4" />
-                        ))}
-                      {sortField !== "status" && <ArrowUpDown className="ml-2 h-4 w-4 opacity-50" />}
-                    </Button>
-                  </TableHead>
-                  <TableHead className="w-32 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAndSortedTasks.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center">
-                      <div className="flex flex-col items-center justify-center text-muted-foreground">
-                        <Sparkles className="w-8 h-8 mb-2" />
-                        <p className="font-medium">No tasks found</p>
-                        <p className="text-sm">Try adjusting your search or filters</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAndSortedTasks.map((task, index) => (
-                    <TableRow key={task.id} className="group hover:bg-muted/50">
-                      <TableCell className="font-mono text-sm text-muted-foreground">{index + 1}</TableCell>
-                      <TableCell>
-                        {editingTask === task.id ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={editingContent}
-                              onChange={(e) => setEditingContent(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveEditedTask(task.status, task.id)
-                                if (e.key === "Escape") {
-                                  setEditingTask(null)
-                                  setEditingContent("")
-                                }
-                              }}
-                              className="flex-grow border-primary/20 focus:border-primary"
-                              autoFocus
-                            />
-                            <Button
-                              size="icon"
-                              onClick={() => saveEditedTask(task.status, task.id)}
-                              className="bg-primary hover:bg-primary/90 transition-colors h-8 w-8"
-                              aria-label="Save task"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="font-medium text-foreground leading-relaxed">{task.content}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Select value={task.status} onValueChange={(newStatus) => updateTaskStatus(task.id, newStatus)}>
-                          <SelectTrigger className="w-full h-8">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${task.statusColor}`} />
-                              <SelectValue />
-                            </div>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="todo">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-primary" />
-                                To Do
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="inprogress">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                                In Progress
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="done">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                Done
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
-                            onClick={() => startEditingTask(task.id, task.content)}
-                            aria-label="Edit task"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                                aria-label="Delete task"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="border-0 shadow-2xl">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="text-foreground">Delete Task?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-muted-foreground">
-                                  This action cannot be undone. The task will be permanently removed.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel className="border-border">Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteTask(task.status, task.id)}
-                                  className="bg-destructive hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-
   if (isLoading) {
     return (
       <div className="container mx-auto p-6 max-w-6xl">
@@ -1859,7 +1933,7 @@ const KanbanTodo = () => {
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+                {dueDate ? format(dueDate, "PPP") : <span>Pick a due date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
