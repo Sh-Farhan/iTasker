@@ -1,5 +1,4 @@
-// // app/api/users/route.js
-// import { NextResponse } from "next/server";
+//   import { NextResponse } from "next/server";
 // import { MongoClient, ObjectId } from "mongodb";
 // import jwt from "jsonwebtoken";
 
@@ -87,7 +86,7 @@
 //       return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
 //     }
 
-//     const { content, status, subtasks } = await req.json();
+//     const { content, status, subtasks, dueDate } = await req.json();
 //     if (!content || !status) {
 //         return NextResponse.json({ error: "Content and status are required" }, { status: 400 });
 //     }
@@ -98,6 +97,8 @@
 //     const newTask = {
 //       content,
 //       status,
+//       createdAt: new Date().toISOString(),
+//       dueDate: dueDate || null,
 //       subtasks: (subtasks || []).map(subtask => ({
 //           ...subtask,
 //           id: new ObjectId().toString(),
@@ -125,7 +126,7 @@
 //       return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
 //     }
 
-//     const { id, content, status, subtasks } = await req.json();
+//     const { id, content, status, subtasks, dueDate } = await req.json();
 //     if (!id) {
 //       return NextResponse.json({ error: "Task ID is required" }, { status: 400 });
 //     }
@@ -136,6 +137,7 @@
 //     const updateFields = {};
 //     if (content) updateFields.content = content;
 //     if (status) updateFields.status = status;
+//     if (dueDate) updateFields.dueDate = dueDate;
 //     if (subtasks !== undefined) {
 //         updateFields.subtasks = subtasks.map(subtask => ({
 //             ...subtask,
@@ -203,58 +205,63 @@
 //   }
 // };
 
-// app/api/users/route.js
-import { NextResponse } from "next/server";
-import { MongoClient, ObjectId } from "mongodb";
+import { NextResponse, NextRequest } from "next/server";
+import { MongoClient, ObjectId, Db } from "mongodb";
 import jwt from "jsonwebtoken";
 
-// Ensure MONGODB_URI and TOKEN_SECRET are set in your .env file
+// Define the shape of a decoded token
+interface DecodedToken {
+  username: string;
+  iat: number;
+  exp: number;
+}
+
+// Ensure environment variables are defined
 const MONGODB_URI = process.env.MONGODB_URI;
-const TOKEN_SECRET = process.env.TOKEN_SECRET;
-
 if (!MONGODB_URI) {
-  throw new Error(
-    "Please define the MONGODB_URI environment variable inside .env.local"
-  );
-}
-if (!TOKEN_SECRET) {
-  throw new Error(
-    "Please define the TOKEN_SECRET environment variable inside .env.local"
-  );
+  throw new Error("Please define the MONGODB_URI environment variable inside .env.local");
 }
 
-/**
- * @type {import('mongodb').MongoClient | null}
- */
-let cachedClient = null;
+const TOKEN_SECRET = process.env.TOKEN_SECRET;
+if (!TOKEN_SECRET) {
+  throw new Error("Please define the TOKEN_SECRET environment variable inside .env.local");
+}
+
+let cachedClient: MongoClient | null = null;
+let cachedDb: Db | null = null;
 
 async function connectToDatabase() {
-  if (cachedClient) {
-    return cachedClient.db("iTasker-todos");
+  if (cachedClient && cachedDb) {
+    return cachedDb;
   }
   const client = new MongoClient(MONGODB_URI);
   await client.connect();
+  const db = client.db("iTasker-todos");
+
   cachedClient = client;
-  return client.db("iTasker-todos");
+  cachedDb = db;
+
+  return db;
 }
 
-// Helper function to verify token and get username
-const getUserFromToken = (req) => {
+// Helper function to verify token and get username from the request
+const getUserFromToken = (req: NextRequest): string | null => {
   const token = req.cookies.get("token")?.value;
   if (!token) {
     return null;
   }
   try {
-    const decodedToken = jwt.verify(token, TOKEN_SECRET);
+    const decodedToken = jwt.verify(token, TOKEN_SECRET) as DecodedToken;
     return decodedToken.username;
   } catch (error) {
-    // This will catch invalid/expired tokens
+    // This will catch invalid or expired tokens
+    console.error("JWT verification failed:", error);
     return null;
   }
 };
 
 // GET all tasks for the logged-in user
-export const GET = async (req) => {
+export const GET = async (req: NextRequest) => {
   try {
     const username = getUserFromToken(req);
     if (!username) {
@@ -265,16 +272,16 @@ export const GET = async (req) => {
     const collection = db.collection(username);
     const tasks = await collection.find({}).toArray();
 
-    // ✅ Map MongoDB's _id to id for frontend consistency
+    // Map MongoDB's _id to id for frontend consistency
     const formattedTasks = tasks.map(task => ({
-        ...task,
-        id: task._id.toString(), // Convert ObjectId to string
-        _id: undefined, // Remove the original _id
-        subtasks: (task.subtasks || []).map(subtask => ({
-            ...subtask,
-            id: subtask._id ? subtask._id.toString() : subtask.id || new ObjectId().toString(),
-            _id: undefined
-        })),
+      ...task,
+      id: task._id.toString(), // Convert ObjectId to string
+      _id: undefined, // Remove the original _id
+      subtasks: (task.subtasks || []).map((subtask: any) => ({
+        ...subtask,
+        id: subtask._id ? subtask._id.toString() : subtask.id || new ObjectId().toString(),
+        _id: undefined,
+      })),
     }));
 
     return NextResponse.json(formattedTasks, { status: 200 });
@@ -285,16 +292,16 @@ export const GET = async (req) => {
 };
 
 // POST a new task
-export const POST = async (req) => {
+export const POST = async (req: NextRequest) => {
   try {
     const username = getUserFromToken(req);
     if (!username) {
       return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
     }
 
-    const { content, status, subtasks, dueDate } = await req.json();
+    const { content, status, subtasks } = await req.json();
     if (!content || !status) {
-        return NextResponse.json({ error: "Content and status are required" }, { status: 400 });
+      return NextResponse.json({ error: "Content and status are required" }, { status: 400 });
     }
 
     const db = await connectToDatabase();
@@ -303,12 +310,9 @@ export const POST = async (req) => {
     const newTask = {
       content,
       status,
-      createdAt: new Date().toISOString(),
-      dueDate: dueDate || null,
-      subtasks: (subtasks || []).map(subtask => ({
-          ...subtask,
-          id: new ObjectId().toString(),
-          completed: subtask.completed || false
+      subtasks: (subtasks || []).map((subtask: any) => ({
+        ...subtask,
+        _id: new ObjectId(), // Assign a new ObjectId to each subtask
       })),
     };
     const result = await collection.insertOne(newTask);
@@ -325,14 +329,14 @@ export const POST = async (req) => {
 };
 
 // PUT (update) an existing task
-export const PUT = async (req) => {
+export const PUT = async (req: NextRequest) => {
   try {
     const username = getUserFromToken(req);
     if (!username) {
       return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
     }
 
-    const { id, content, status, subtasks, dueDate } = await req.json();
+    const { id, content, status, subtasks } = await req.json();
     if (!id) {
       return NextResponse.json({ error: "Task ID is required" }, { status: 400 });
     }
@@ -340,20 +344,18 @@ export const PUT = async (req) => {
     const db = await connectToDatabase();
     const collection = db.collection(username);
     
-    const updateFields = {};
+    const updateFields: { [key: string]: any } = {};
     if (content) updateFields.content = content;
     if (status) updateFields.status = status;
-    if (dueDate) updateFields.dueDate = dueDate;
     if (subtasks !== undefined) {
-        updateFields.subtasks = subtasks.map(subtask => ({
-            ...subtask,
-            id: subtask.id || new ObjectId().toString(),
-            completed: subtask.completed || false,
-        }));
+      updateFields.subtasks = subtasks.map((subtask: any) => ({
+        ...subtask,
+        _id: subtask._id ? new ObjectId(subtask._id) : new ObjectId(),
+      }));
     }
 
     if (Object.keys(updateFields).length === 0) {
-        return NextResponse.json({ error: "No fields to update provided" }, { status: 400 });
+      return NextResponse.json({ error: "No fields to update provided" }, { status: 400 });
     }
 
     const result = await collection.updateOne(
@@ -362,15 +364,14 @@ export const PUT = async (req) => {
     );
 
     if (result.matchedCount === 0) {
-        return NextResponse.json({ error: "Task not found" }, { status: 404 });
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
     return NextResponse.json({ message: "Task updated successfully" }, { status: 200 });
   } catch (error) {
     console.error("Error updating task:", error);
-    // Handle cases where the ID format is invalid
-    if (error.name === 'BSONError') {
-        return NextResponse.json({ error: "Invalid Task ID format" }, { status: 400 });
+    if (error instanceof Error && error.name === 'BSONError') {
+      return NextResponse.json({ error: "Invalid Task ID format" }, { status: 400 });
     }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -378,14 +379,13 @@ export const PUT = async (req) => {
 
 
 // DELETE a task
-export const DELETE = async (req) => {
+export const DELETE = async (req: NextRequest) => {
   try {
     const username = getUserFromToken(req);
     if (!username) {
       return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
     }
 
-    // ✅ Correctly get the ID from the request body
     const { id } = await req.json();
     if (!id) {
       return NextResponse.json({ error: "Task ID is required" }, { status: 400 });
@@ -394,7 +394,6 @@ export const DELETE = async (req) => {
     const db = await connectToDatabase();
     const collection = db.collection(username);
 
-    // ✅ Use the ID to create a correct ObjectId for deletion
     const result = await collection.deleteOne({ _id: new ObjectId(id) });
 
     if (result.deletedCount === 0) {
@@ -404,8 +403,8 @@ export const DELETE = async (req) => {
     return NextResponse.json({ message: "Task deleted successfully" }, { status: 200 });
   } catch (error) {
     console.error("Error deleting task:", error);
-    if (error.name === 'BSONError') {
-        return NextResponse.json({ error: "Invalid Task ID format" }, { status: 400 });
+    if (error instanceof Error && error.name === 'BSONError') {
+      return NextResponse.json({ error: "Invalid Task ID format" }, { status: 400 });
     }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
